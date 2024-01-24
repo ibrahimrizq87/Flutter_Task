@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
+
 void main() {
   runApp(const MyApp());
 }
@@ -18,15 +20,16 @@ class MyApp extends StatelessWidget {
 }
 class RedditPost {
   final String title;
-  final String author;
+  final String description;
+  final String url;
 
-  RedditPost({required this.title, required this.author});
+  RedditPost({required this.title, required this.description, required this.url,});
 }
-
 class RedditPostWidget extends StatelessWidget {
   final RedditPost post;
+  final int postIndex;
 
-  RedditPostWidget({required this.post});
+  RedditPostWidget({required this.post,required this.postIndex});
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +40,7 @@ class RedditPostWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(8.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.5),
+            color: Colors.yellow.withOpacity(0.5),
             spreadRadius: 2,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -45,14 +48,50 @@ class RedditPostWidget extends StatelessWidget {
         ],
       ),
       child: Card(
-        child: ListTile(
-          title: Text(post.title),
-          subtitle: Text("Author: ${post.author}"),
+        child: InkWell(
+          onTap: () {
+            _launchURL(post.url);
+          },
+          child: ListTile(
+            title: RichText(
+              text: TextSpan(
+                text: "${post.title} #${postIndex}" ,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            subtitle: Text(
+              post.description,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 14,
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
-}
+  void _launchURL(String url) async {
+    try {
+      await launch(url);
+    } catch (e) {
+      print('Error launching URL: $e');
+    }
+  }
+  /*void _launchURL(String url) async {
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      throw 'Could not launch $url';
+    }
+  }
+*/}
+
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -67,12 +106,12 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    fetchRedditData();
+    fetchRedditData('hot');
   }
 
-  Future<void> fetchRedditData() async {
+  Future<void> fetchRedditData(String sortType) async {
     final response = await http.get(
-      Uri.parse('https://www.reddit.com/r/FlutterDev.json?limit=10&after=$after'),
+      Uri.parse('https://www.reddit.com/r/FlutterDev/$sortType.json?limit=10&after=$after'),
     );
 
     if (response.statusCode == 200) {
@@ -86,7 +125,8 @@ class _HomePageState extends State<HomePage> {
           final postData = post['data'];
           return RedditPost(
             title: postData['title'],
-            author: postData['author'],
+            description: postData['selftext'] ?? 'null content',
+            url: postData['url'],
           );
         }).toList());
       });
@@ -102,14 +142,14 @@ class _HomePageState extends State<HomePage> {
       body: NotificationListener<ScrollNotification>(
         onNotification: (ScrollNotification scrollInfo) {
           if (scrollInfo.metrics.pixels == scrollInfo.metrics.maxScrollExtent) {
-            fetchRedditData();
+            fetchRedditData('hot');
           }
           return false;
         },
         child: ListView.builder(
           itemCount: redditPosts.length,
           itemBuilder: (context, index) {
-            return RedditPostWidget(post: redditPosts[index]);
+            return RedditPostWidget(post: redditPosts[index],postIndex: index);
           },
         ),
       ),
