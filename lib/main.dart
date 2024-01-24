@@ -83,14 +83,7 @@ class RedditPostWidget extends StatelessWidget {
       print('Error launching URL: $e');
     }
   }
-  /*void _launchURL(String url) async {
-    if (await canLaunch(url)) {
-      await launch(url);
-    } else {
-      throw 'Could not launch $url';
-    }
   }
-*/}
 
 
 class HomePage extends StatefulWidget {
@@ -99,9 +92,11 @@ class HomePage extends StatefulWidget {
   @override
   _HomePageState createState() => _HomePageState();
 }
+
 class _HomePageState extends State<HomePage> {
   List<RedditPost> redditPosts = [];
   String after = '';
+  int selectedIndex = 0;
 
   @override
   void initState() {
@@ -133,6 +128,30 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void changeSortType(int index) {
+    String sortType;
+    switch (index) {
+      case 0:
+        sortType = 'hot';
+        break;
+      case 1:
+        sortType = 'new';
+        break;
+      case 2:
+        sortType = 'rising';
+        break;
+      default:
+        sortType = 'hot';
+    }
+
+    setState(() {
+      redditPosts.clear();
+      after = '';
+      selectedIndex = index;
+      fetchRedditData(sortType);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -149,9 +168,27 @@ class _HomePageState extends State<HomePage> {
         child: ListView.builder(
           itemCount: redditPosts.length,
           itemBuilder: (context, index) {
-            return RedditPostWidget(post: redditPosts[index],postIndex: index);
+            return RedditPostWidget(post: redditPosts[index], postIndex: index);
           },
         ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: selectedIndex,
+        onTap: changeSortType,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.whatshot),
+            label: 'Hot',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.new_releases),
+            label: 'New',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.trending_up),
+            label: 'Rising',
+          ),
+        ],
       ),
     );
   }
